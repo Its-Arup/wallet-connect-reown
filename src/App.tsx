@@ -1,33 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi' 
+import { parseEther } from 'viem'
+import axios from 'axios'
 import './App.css'
+import { useEffect } from 'react'
 
 function App() {
-  const [count, setCount] = useState(0)
+  
+  const { 
+    data: hash, 
+    isPending,
+    sendTransaction 
+  } = useSendTransaction() 
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) { 
+    e.preventDefault() 
+    console.log('submit');
+    
+    const formData = new FormData(e.target as HTMLFormElement) 
+    const to = formData.get('address') as `0x${string}` 
+    const value = formData.get('value') as string 
+    sendTransaction({ to, value: parseEther(value)}) 
+  } 
+
+  const { isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    })
+
+
+  async function getverification (hash: string) {
+    try {
+      const response = await axios.post("http://localhost:8080/api/transaction/verify", {
+        hash
+      })
+      console.log('Verification:', response.data)
+    } catch (error) {
+      console.log('Verification Error:', error);
+      
+    }
+  }
+
+  useEffect(() => {
+    if (isConfirmed && hash) {
+      getverification(hash)
+    }
+  }, [isConfirmed, hash])
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <form onSubmit={submit}>
+      <input name="address" placeholder="0xA0Cf…251e" required />
+      <input name="value" placeholder="0.05" required />
+      <button 
+        disabled={isPending}
+        type="submit"
+      >
+        Send
+        {isPending ? 'Confirming...' : 'Send'}
+      </button>
+      {hash && <div>Transaction Hash: {hash}</div>} 
+    </form>
     </>
   )
 }
