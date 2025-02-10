@@ -31,7 +31,12 @@ function App() {
   async function getverification (hash: string) {
     try {
       const response = await axios.post("http://localhost:8080/api/transaction/verify", {
-        hash
+        hash,
+        planType: "Basic",
+      },
+      {
+        withCredentials: true, 
+        headers: { "Content-Type": "application/json" },
       })
       console.log('Verification:', response.data)
     } catch (error) {
