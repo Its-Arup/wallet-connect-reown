@@ -1,36 +1,38 @@
-import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi' 
-import { parseEther } from 'viem'
-import axios from 'axios'
+
 import './App.css'
-import { useEffect } from 'react'
+import { abi } from './blockchain/abi/erc20.abi'
+import { writeContract } from 'wagmi/actions'
+import { config } from './blockchain/config/config'
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 
 function App() {
   
-  const { 
-    data: hash, 
-    isPending,
-    sendTransaction 
-  } = useSendTransaction() 
+  const [amount, setAmount] = useState(0);
+  const [hash, setHash] = useState('');
 
-  async function submit(e: React.FormEvent<HTMLFormElement>) { 
-    e.preventDefault() 
-    console.log('submit');
-    
-    const formData = new FormData(e.target as HTMLFormElement) 
-    const to = formData.get('address') as `0x${string}` 
-    const value = formData.get('value') as string 
-    sendTransaction({ to, value: parseEther(value)}) 
-  } 
+  const useSendTransaction = async ()=>{
 
-  const { isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    })
+    const amountInWei = BigInt(Number(amount) * 10 ** 18); // Convert to BigInt with 18 decimals
 
+    const result = await writeContract(config, {
+      abi,
+      address: '0x6d35d577Eab04AB6A0882b9F9dBdaf04b2c65810', // token address
+      functionName: 'transfer',
+      args: [
+        '0x61A4D46C29Af78F9FADF093864e5aeb660cC2ab3',  // Recipient
+        amountInWei,  // Amount (10 tokens with 18 decimals)
+      ],
+    });
+
+    console.log(result);
+    setHash(result);
+
+  }
 
   async function getverification (hash: string) {
     try {
-      const response = await axios.post("http://localhost:8080/api/transaction/verify", {
+      const response = await axios.post("http://localhost:8080/api/transaction/verify-new", {
         hash,
         planType: "Basic",
       },
@@ -45,26 +47,27 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    if (isConfirmed && hash) {
-      getverification(hash)
+
+  useEffect(()=>{
+    if(hash){
+      getverification(hash);
     }
-  }, [isConfirmed, hash])
+  },[hash]);
 
   return (
     <>
-      <form onSubmit={submit}>
-      <input name="address" placeholder="0xA0Cf…251e" required />
-      <input name="value" placeholder="0.05" required />
+      <input 
+        type="number" 
+        value={amount}
+        onChange={(e)=>setAmount(Number(e.target.value))} />
+      <br />
+      
       <button 
-        disabled={isPending}
-        type="submit"
+        onClick={useSendTransaction}
       >
         Send
-        {isPending ? 'Confirming...' : 'Send'}
       </button>
-      {hash && <div>Transaction Hash: {hash}</div>} 
-    </form>
+      
     </>
   )
 }
